@@ -10,6 +10,8 @@
 
 #include "rubysocket.h"
 
+#include "internal/scheduler.h"
+
 #if defined(INET6) && (defined(LOOKUP_ORDER_HACK_INET) || defined(LOOKUP_ORDER_HACK_INET6))
 #define LOOKUP_ORDERS (sizeof(lookup_order_table) / sizeof(lookup_order_table[0]))
 static const int lookup_order_table[] = {
@@ -2614,6 +2616,12 @@ static ID id_timeout;
 static VALUE
 addrinfo_s_getaddrinfo(int argc, VALUE *argv, VALUE self)
 {
+    VALUE scheduler = rb_scheduler_current();
+
+    if (scheduler != Qnil && rb_scheduler_supports_io_write(scheduler)) {
+        return rb_scheduler_address_resolve(scheduler, argc, argv);
+    }
+
     VALUE node, service, family, socktype, protocol, flags, opts, timeout;
 
     rb_scan_args(argc, argv, "24:", &node, &service, &family, &socktype,

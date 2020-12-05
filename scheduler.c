@@ -23,6 +23,8 @@ static ID id_io_read;
 static ID id_io_write;
 static ID id_io_wait;
 
+static ID id_address_resolve;
+
 void
 Init_Scheduler(void)
 {
@@ -36,6 +38,8 @@ Init_Scheduler(void)
     id_io_read = rb_intern_const("io_read");
     id_io_write = rb_intern_const("io_write");
     id_io_wait = rb_intern_const("io_wait");
+
+    id_address_resolve = rb_intern_const("address_resolve");
 }
 
 VALUE
@@ -171,4 +175,16 @@ rb_scheduler_io_write(VALUE scheduler, VALUE io, VALUE buffer, size_t offset, si
 {
     // We should ensure string has capacity to receive data, and then resize it afterwards.
     return rb_funcall(scheduler, id_io_write, 4, io, buffer, SIZET2NUM(offset), SIZET2NUM(length));
+}
+
+int
+rb_scheduler_supports_address_resolve(VALUE scheduler)
+{
+    return rb_respond_to(scheduler, id_address_resolve);
+}
+
+VALUE
+rb_scheduler_address_resolve(VALUE scheduler, int argc, VALUE * argv)
+{
+    return rb_funcallv(scheduler, id_address_resolve, argc, argv);
 }
