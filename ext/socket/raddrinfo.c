@@ -2618,7 +2618,7 @@ addrinfo_s_getaddrinfo(int argc, VALUE *argv, VALUE self)
 {
     VALUE scheduler = rb_scheduler_current();
 
-    if (scheduler != Qnil && rb_scheduler_supports_io_write(scheduler)) {
+    if (scheduler != Qnil && rb_scheduler_supports_address_resolve(scheduler)) {
         return rb_scheduler_address_resolve(scheduler, argc, argv);
     }
 
