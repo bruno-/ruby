@@ -181,10 +181,10 @@ class Scheduler
     return fiber
   end
 
-  def address_resolve(nodename, service, family = nil, socktype = nil, protocol = nil, *flags)
+  def address_resolve(nodename, service, family = nil, socktype = nil, protocol = nil, flags = nil)
     Thread.new do
-      # TODO: double check arguments (flags). Add timeout?
-      Addrinfo.getaddrinfo(nodename, service, family, socktype, protocol, *flags)
+      # TODO: add timeout?
+      Addrinfo.getaddrinfo(nodename, service, family, socktype, protocol, flags)
     end.value
   end
 end
