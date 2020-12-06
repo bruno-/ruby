@@ -28,6 +28,6 @@ class TestAddressResolve < Test::Unit::TestCase
       end
     end.join
 
-    assert_equal([2, 1], finished_order)
+    assert_equal([2, 1], finished_order) # TODO
   end
 end
