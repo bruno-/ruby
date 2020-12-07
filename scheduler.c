@@ -184,7 +184,7 @@ rb_scheduler_supports_address_resolve(VALUE scheduler)
 }
 
 VALUE
-rb_scheduler_address_resolve(VALUE scheduler, int argc, VALUE * argv)
+rb_scheduler_address_resolve(VALUE scheduler, VALUE hostname, VALUE timeout)
 {
-    return rb_funcallv(scheduler, id_address_resolve, argc, argv);
+    return rb_funcall(scheduler, id_address_resolve, 2, hostname, timeout);
 }

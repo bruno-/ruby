@@ -320,17 +320,42 @@ rb_getaddrinfo(const char *node, const char *service,
     if (ret == 0)
         allocated_by_malloc = 1;
     else {
+        VALUE scheduler = rb_scheduler_current();
+
+        if (scheduler != Qnil && rb_scheduler_supports_address_resolve(scheduler)) {
+            VALUE host = rb_str_new_cstr(node);
+            VALUE ip_addresses_array = rb_scheduler_address_resolve(scheduler, host, Qnil);
+
+            long i, len = RARRAY_LEN(ip_addresses_array);
+            const VALUE *array_ptr = RARRAY_CONST_PTR(ip_addresses_array);
+            VALUE ip_address_str;
+            int ip_address_ret;
+            char *hostp;
+            char hbuf[NI_MAXHOST]; // ignored
+            int additional_flags = 0; // ignored
+
+            for(i=0; i<len; i++) {
+                ip_address_str = array_ptr[i];
+                hostp = host_str(ip_address_str, hbuf, sizeof(hbuf), &additional_flags);
+                ip_address_ret = numeric_getaddrinfo(hostp, service, hints, &ai);
+                if (ip_address_ret == 0) {
+                    ret = 0;
+                    allocated_by_malloc = 1;
+                }
+            }
+        } else {
 #ifdef GETADDRINFO_EMU
-        ret = getaddrinfo(node, service, hints, &ai);
+            ret = getaddrinfo(node, service, hints, &ai);
 #else
-        struct getaddrinfo_arg arg;
-        MEMZERO(&arg, struct getaddrinfo_arg, 1);
-        arg.node = node;
-        arg.service = service;
-        arg.hints = hints;
-        arg.res = &ai;
-        ret = (int)(VALUE)rb_thread_call_without_gvl(nogvl_getaddrinfo, &arg, RUBY_UBF_IO, 0);
+            struct getaddrinfo_arg arg;
+            MEMZERO(&arg, struct getaddrinfo_arg, 1);
+            arg.node = node;
+            arg.service = service;
+            arg.hints = hints;
+            arg.res = &ai;
+            ret = (int)(VALUE)rb_thread_call_without_gvl(nogvl_getaddrinfo, &arg, RUBY_UBF_IO, 0);
 #endif
+        }
     }
 
     if (ret == 0) {
@@ -465,37 +490,63 @@ rb_getaddrinfo_a(const char *node, const char *service,
     if (ret == 0)
         allocated_by_malloc = 1;
     else {
-	struct gai_suspend_arg arg;
-	struct gaicb *reqs[1];
-	struct gaicb req;
+        VALUE scheduler = rb_scheduler_current();
 
-	req.ar_name = node;
-	req.ar_service = service;
-	req.ar_request = hints;
+        if (scheduler != Qnil && rb_scheduler_supports_address_resolve(scheduler)) {
+            VALUE host = rb_str_new_cstr(node);
+            VALUE rb_timeout = rb_time_timespec_new(timeout);
+            VALUE ip_addresses_array = rb_scheduler_address_resolve(scheduler, host, rb_timeout);
 
-	reqs[0] = &req;
-	ret = getaddrinfo_a(GAI_NOWAIT, reqs, 1, NULL);
-	if (ret) return ret;
-        gaicbs_add(&req);
+            long i, len = RARRAY_LEN(ip_addresses_array);
+            const VALUE *array_ptr = RARRAY_CONST_PTR(ip_addresses_array);
+            VALUE ip_address_str;
+            int ip_address_ret;
+            char *hostp;
+            char hbuf[NI_MAXHOST]; // ignored
+            int additional_flags = 0; // ignored
 
-	arg.req = &req;
-	arg.timeout = timeout;
-
-	ret = (int)(VALUE)rb_thread_call_without_gvl(nogvl_gai_suspend, &arg, RUBY_UBF_IO, 0);
-        gaicbs_remove(&req);
-        if (ret && ret != EAI_ALLDONE) {
-            /* EAI_ALLDONE indicates that the request already completed and gai_suspend was redundant */
-            /* on Ubuntu 18.04 (or other systems), gai_suspend(3) returns EAI_SYSTEM/ENOENT on timeout */
-            if (ret == EAI_SYSTEM && errno == ENOENT) {
-                return EAI_AGAIN;
-            } else {
-                return ret;
+            for(i=0; i<len; i++) {
+                ip_address_str = array_ptr[i];
+                hostp = host_str(ip_address_str, hbuf, sizeof(hbuf), &additional_flags);
+                ip_address_ret = numeric_getaddrinfo(hostp, service, hints, &ai);
+                if (ip_address_ret == 0) {
+                    ret = 0;
+                    allocated_by_malloc = 1;
+                }
             }
+        } else {
+            struct gai_suspend_arg arg;
+            struct gaicb *reqs[1];
+            struct gaicb req;
+
+            req.ar_name = node;
+            req.ar_service = service;
+            req.ar_request = hints;
+
+            reqs[0] = &req;
+            ret = getaddrinfo_a(GAI_NOWAIT, reqs, 1, NULL);
+            if (ret) return ret;
+            gaicbs_add(&req);
+
+            arg.req = &req;
+            arg.timeout = timeout;
+
+            ret = (int)(VALUE)rb_thread_call_without_gvl(nogvl_gai_suspend, &arg, RUBY_UBF_IO, 0);
+            gaicbs_remove(&req);
+            if (ret && ret != EAI_ALLDONE) {
+                /* EAI_ALLDONE indicates that the request already completed and gai_suspend was redundant */
+                /* on Ubuntu 18.04 (or other systems), gai_suspend(3) returns EAI_SYSTEM/ENOENT on timeout */
+                if (ret == EAI_SYSTEM && errno == ENOENT) {
+                    return EAI_AGAIN;
+                } else {
+                    return ret;
+                }
+            }
+
+
+            ret = gai_error(reqs[0]);
+            ai = reqs[0]->ar_result;
         }
-
-
-	ret = gai_error(reqs[0]);
-	ai = reqs[0]->ar_result;
     }
 
     if (ret == 0) {
@@ -2616,12 +2667,6 @@ static ID id_timeout;
 static VALUE
 addrinfo_s_getaddrinfo(int argc, VALUE *argv, VALUE self)
 {
-    VALUE scheduler = rb_scheduler_current();
-
-    if (scheduler != Qnil && rb_scheduler_supports_address_resolve(scheduler)) {
-        return rb_scheduler_address_resolve(scheduler, argc, argv);
-    }
-
     VALUE node, service, family, socktype, protocol, flags, opts, timeout;
 
     rb_scan_args(argc, argv, "24:", &node, &service, &family, &socktype,

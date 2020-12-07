@@ -181,10 +181,9 @@ class Scheduler
     return fiber
   end
 
-  def address_resolve(nodename, service, family = nil, socktype = nil, protocol = nil, flags = nil)
+  def address_resolve(hostname, timeout = nil)
     Thread.new do
-      # TODO: add timeout?
-      Addrinfo.getaddrinfo(nodename, service, family, socktype, protocol, flags)
+      Addrinfo.getaddrinfo(hostname, nil).map(&:ip_address).uniq
     end.value
   end
 end
