@@ -39,6 +39,6 @@ int rb_scheduler_supports_io_write(VALUE scheduler);
 VALUE rb_scheduler_io_write(VALUE scheduler, VALUE io, VALUE buffer, size_t offset, size_t length);
 
 int rb_scheduler_supports_address_resolve(VALUE scheduler);
-VALUE rb_scheduler_address_resolve(VALUE scheduler, int argc, VALUE * argv);
+VALUE rb_scheduler_address_resolve(VALUE scheduler, VALUE hostname, VALUE timeout);
 
 #endif /* RUBY_SCHEDULER_H */
