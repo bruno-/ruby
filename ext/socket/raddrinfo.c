@@ -308,11 +308,11 @@ numeric_getaddrinfo(const char *node, const char *service,
 }
 
 int
-rb_schedule_getaddrinfo(const char *node, const char *service,
+rb_schedule_getaddrinfo(VALUE scheduler, const char *node, const char *service,
                const struct addrinfo *hints,
                struct rb_addrinfo **res, VALUE timeout)
 {
-    int ret, int allocated_by_malloc = 0, res_allocated = 0, _additional_flags = 0;
+    int ret, res_allocated = 0, _additional_flags = 0;
     long i, len;
     struct addrinfo *ai;
     char *hostp;
@@ -362,7 +362,7 @@ rb_getaddrinfo(const char *node, const char *service,
 
         if (scheduler != Qnil && rb_scheduler_supports_address_resolve(scheduler) &&
             node && !(*hints & AI_NUMERICHOST)) {
-            return rb_schedule_getaddrinfo(node, service, hints, res, Qnil);
+            return rb_schedule_getaddrinfo(scheduler, node, service, hints, res, Qnil);
         } else {
 #ifdef GETADDRINFO_EMU
             ret = getaddrinfo(node, service, hints, &ai);
@@ -515,7 +515,7 @@ rb_getaddrinfo_a(const char *node, const char *service,
         if (scheduler != Qnil && rb_scheduler_supports_address_resolve(scheduler) &&
             node && !(*hints & AI_NUMERICHOST)) {
             VALUE rb_timeout = rb_time_timespec_new(timeout);
-            return rb_schedule_getaddrinfo(node, service, hints, res, rb_timeout);
+            return rb_schedule_getaddrinfo(scheduler, node, service, hints, res, rb_timeout);
         } else {
             struct gai_suspend_arg arg;
             struct gaicb *reqs[1];
