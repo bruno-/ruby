@@ -308,6 +308,44 @@ numeric_getaddrinfo(const char *node, const char *service,
 }
 
 int
+rb_schedule_getaddrinfo(const char *node, const char *service,
+               const struct addrinfo *hints,
+               struct rb_addrinfo **res, VALUE timeout)
+{
+    int ret, int allocated_by_malloc = 0, res_allocated = 0, _additional_flags = 0;
+    long i, len;
+    struct addrinfo *ai;
+    char *hostp;
+    char _hbuf[NI_MAXHOST];
+    VALUE host, ip_addresses_array;
+
+    host = rb_str_new_cstr(node);
+    ip_addresses_array = rb_scheduler_address_resolve(scheduler, host, Qnil);
+    len = RARRAY_LEN(ip_addresses_array);
+    const VALUE *array_ptr = RARRAY_CONST_PTR(ip_addresses_array);
+
+    for(i=0; i<len; i++) {
+        hostp = host_str(array_ptr[i], _hbuf, sizeof(_hbuf), &_additional_flags);
+        ret = numeric_getaddrinfo(hostp, service, hints, &ai);
+        if (ret == 0) {
+            if (!res_allocated) {
+                res_allocated = 1;
+                *res = (struct rb_addrinfo *)xmalloc(sizeof(struct rb_addrinfo));
+                (*res)->allocated_by_malloc = 1;
+                (*res)->ai = ai;
+            }
+            ai = ai->ai_next;
+        }
+    }
+
+    if (res_allocated) { // At least one valid result.
+        return 0;
+    } else {
+        rb_raise(rb_eSocket, "getaddrinfo: nodename nor servname provided, or not known");
+    }
+}
+
+int
 rb_getaddrinfo(const char *node, const char *service,
                const struct addrinfo *hints,
                struct rb_addrinfo **res)
@@ -322,27 +360,9 @@ rb_getaddrinfo(const char *node, const char *service,
     else {
         VALUE scheduler = rb_scheduler_current();
 
-        if (scheduler != Qnil && rb_scheduler_supports_address_resolve(scheduler)) {
-            VALUE host = rb_str_new_cstr(node);
-            VALUE ip_addresses_array = rb_scheduler_address_resolve(scheduler, host, Qnil);
-
-            long i, len = RARRAY_LEN(ip_addresses_array);
-            const VALUE *array_ptr = RARRAY_CONST_PTR(ip_addresses_array);
-            VALUE ip_address_str;
-            int ip_address_ret;
-            char *hostp;
-            char hbuf[NI_MAXHOST]; // ignored
-            int additional_flags = 0; // ignored
-
-            for(i=0; i<len; i++) {
-                ip_address_str = array_ptr[i];
-                hostp = host_str(ip_address_str, hbuf, sizeof(hbuf), &additional_flags);
-                ip_address_ret = numeric_getaddrinfo(hostp, service, hints, &ai);
-                if (ip_address_ret == 0) {
-                    ret = 0;
-                    allocated_by_malloc = 1;
-                }
-            }
+        if (scheduler != Qnil && rb_scheduler_supports_address_resolve(scheduler) &&
+            node && !(*hints & AI_NUMERICHOST)) {
+            return rb_schedule_getaddrinfo(node, service, hints, res, Qnil);
         } else {
 #ifdef GETADDRINFO_EMU
             ret = getaddrinfo(node, service, hints, &ai);
@@ -492,28 +512,10 @@ rb_getaddrinfo_a(const char *node, const char *service,
     else {
         VALUE scheduler = rb_scheduler_current();
 
-        if (scheduler != Qnil && rb_scheduler_supports_address_resolve(scheduler)) {
-            VALUE host = rb_str_new_cstr(node);
+        if (scheduler != Qnil && rb_scheduler_supports_address_resolve(scheduler) &&
+            node && !(*hints & AI_NUMERICHOST)) {
             VALUE rb_timeout = rb_time_timespec_new(timeout);
-            VALUE ip_addresses_array = rb_scheduler_address_resolve(scheduler, host, rb_timeout);
-
-            long i, len = RARRAY_LEN(ip_addresses_array);
-            const VALUE *array_ptr = RARRAY_CONST_PTR(ip_addresses_array);
-            VALUE ip_address_str;
-            int ip_address_ret;
-            char *hostp;
-            char hbuf[NI_MAXHOST]; // ignored
-            int additional_flags = 0; // ignored
-
-            for(i=0; i<len; i++) {
-                ip_address_str = array_ptr[i];
-                hostp = host_str(ip_address_str, hbuf, sizeof(hbuf), &additional_flags);
-                ip_address_ret = numeric_getaddrinfo(hostp, service, hints, &ai);
-                if (ip_address_ret == 0) {
-                    ret = 0;
-                    allocated_by_malloc = 1;
-                }
-            }
+            return rb_schedule_getaddrinfo(node, service, hints, res, rb_timeout);
         } else {
             struct gai_suspend_arg arg;
             struct gaicb *reqs[1];
