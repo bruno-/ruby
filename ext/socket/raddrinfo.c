@@ -307,6 +307,8 @@ numeric_getaddrinfo(const char *node, const char *service,
     return EAI_FAIL;
 }
 
+static char* host_str(VALUE host, char *hbuf, size_t hbuflen, int *flags_ptr);
+
 int
 rb_schedule_getaddrinfo(VALUE scheduler, const char *node, const char *service,
                const struct addrinfo *hints,
@@ -361,7 +363,7 @@ rb_getaddrinfo(const char *node, const char *service,
         VALUE scheduler = rb_scheduler_current();
 
         if (scheduler != Qnil && rb_scheduler_supports_address_resolve(scheduler) &&
-            node && !(*hints & AI_NUMERICHOST)) {
+            node && !(hints->ai_flags & AI_NUMERICHOST)) {
             return rb_schedule_getaddrinfo(scheduler, node, service, hints, res, Qnil);
         } else {
 #ifdef GETADDRINFO_EMU
