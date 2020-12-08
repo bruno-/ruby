@@ -363,7 +363,8 @@ rb_getaddrinfo(const char *node, const char *service,
         VALUE scheduler = rb_scheduler_current();
 
         if (scheduler != Qnil && rb_scheduler_supports_address_resolve(scheduler) &&
-            node && !(hints->ai_flags & AI_NUMERICHOST)) {
+            node && !(hints->ai_flags & AI_NUMERICHOST) &&
+            strncmp(node, "localhost", strlen(node))) {
             return rb_schedule_getaddrinfo(scheduler, node, service, hints, res, Qnil);
         } else {
 #ifdef GETADDRINFO_EMU
@@ -515,7 +516,8 @@ rb_getaddrinfo_a(const char *node, const char *service,
         VALUE scheduler = rb_scheduler_current();
 
         if (scheduler != Qnil && rb_scheduler_supports_address_resolve(scheduler) &&
-            node && !(*hints & AI_NUMERICHOST)) {
+            node && !(*hints & AI_NUMERICHOST) &&
+            strncmp(node, "localhost", strlen(node))) {
             VALUE rb_timeout = rb_time_timespec_new(timeout);
             return rb_schedule_getaddrinfo(scheduler, node, service, hints, res, rb_timeout);
         } else {
