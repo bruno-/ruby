@@ -118,4 +118,73 @@ class TestAddressResolve < Test::Unit::TestCase
       end
     end.join
   end
+
+  def test_addrinfo_ip_domain_blocking
+    Thread.new do
+      scheduler = StubScheduler.new
+      Fiber.set_scheduler scheduler
+
+      Fiber.schedule do
+        result = Addrinfo.ip("example.com")
+        assert_equal(1, result.count)
+
+        ai = result.first
+        assert_equal("1.2.3.4", ai.ip_address)
+      end
+    end.join
+  end
+
+  def test_addrinfo_tcp_domain_blocking
+    Thread.new do
+      scheduler = StubScheduler.new
+      Fiber.set_scheduler scheduler
+
+      Fiber.schedule do
+        result = Addrinfo.tcp("example.com", 80)
+        assert_equal(1, result.count)
+
+        ai = result.first
+        assert_equal("1.2.3.4", ai.ip_address)
+        assert_equal(80, ai.ip_port)
+        assert_equal(Socket::AF_INET, ai.afamily)
+        assert_equal(Socket::SOCK_STREAM, ai.socktype)
+      end
+    end.join
+  end
+
+  def test_addrinfo_udp_domain_blocking
+    Thread.new do
+      scheduler = StubScheduler.new
+      Fiber.set_scheduler scheduler
+
+      Fiber.schedule do
+        result = Addrinfo.udp("example.com", 80)
+        assert_equal(1, result.count)
+
+        ai = result.first
+        assert_equal("1.2.3.4", ai.ip_address)
+        assert_equal(80, ai.ip_port)
+        assert_equal(Socket::AF_INET, ai.afamily)
+        assert_equal(Socket::SOCK_DGRAM, ai.socktype)
+      end
+    end.join
+  end
+
+  def test_tcp_socket_gethostbyname_domain_blocking
+    Thread.new do
+      scheduler = StubScheduler.new
+      Fiber.set_scheduler scheduler
+
+      Fiber.schedule do
+        result = TCPSocket.gethostbyname("example.com", 80)
+
+        assert_equal([
+          "example.com",
+          Socket::AF_INET,
+          "1.2.3.4",
+          "1234:1234:123:1:123:1234:1234:1234"
+        ], result)
+      end
+    end.join
+  end
 end
