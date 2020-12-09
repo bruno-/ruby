@@ -319,7 +319,7 @@ rb_schedule_getaddrinfo(VALUE scheduler, const char *node, const char *service,
     struct addrinfo *ai;
     char *hostp;
     char _hbuf[NI_MAXHOST];
-    VALUE host, ip_addresses_array;
+    VALUE host, ip_addresses_array, ip_address;
 
     host = rb_str_new_cstr(node);
     ip_addresses_array = rb_scheduler_address_resolve(scheduler, host, Qnil);
@@ -328,10 +328,10 @@ rb_schedule_getaddrinfo(VALUE scheduler, const char *node, const char *service,
     } else {
         len = RARRAY_LEN(ip_addresses_array);
     }
-    const VALUE *array_ptr = RARRAY_CONST_PTR(ip_addresses_array);
 
     for(i=0; i<len; i++) {
-        hostp = host_str(array_ptr[i], _hbuf, sizeof(_hbuf), &_additional_flags);
+        ip_address = rb_ary_entry(ip_addresses_array, i);
+        hostp = host_str(ip_address, _hbuf, sizeof(_hbuf), &_additional_flags);
         ret = numeric_getaddrinfo(hostp, service, hints, &ai);
         if (ret == 0) {
             if (!res_allocated) {
