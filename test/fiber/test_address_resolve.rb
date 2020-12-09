@@ -3,12 +3,12 @@ require 'test/unit'
 require_relative 'scheduler'
 
 class TestAddressResolve < Test::Unit::TestCase
-  class NoopScheduler
+  class NoopScheduler < Scheduler
     def address_resolve(*)
     end
   end
 
-  class StubScheduler
+  class StubScheduler < Scheduler
     def address_resolve(hostname, timeout = nil)
       ["1.2.3.4", "1234:1234:123:1:123:1234:1234:1234"]
     end
