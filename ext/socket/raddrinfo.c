@@ -614,6 +614,32 @@ rb_getnameinfo(const struct sockaddr *sa, socklen_t salen,
            char *host, size_t hostlen,
            char *serv, size_t servlen, int flags)
 {
+    VALUE scheduler = rb_scheduler_current();
+
+    if (scheduler != Qnil && rb_scheduler_supports_name_resolve(scheduler) &&
+        !(flags & NI_NUMERICHOST)) {
+        VALUE ip_address, hostname;
+        char hbuf[NI_MAXHOST];
+
+        // non-blocking call, unpacks hostname 'hbuf', resolves port 'serv' from 'sa'.
+        rb_getnameinfo(sa, salen, hbuf, sizeof(hbuf), serv, servlen, (flags ^ NI_NAMEREQD) | NI_NUMERICHOST);
+
+        ip_address = rb_str_new_cstr(hbuf);
+        hostname = rb_scheduler_name_resolve(scheduler, ip_address);
+
+        if (NIL_P(hostname)) {
+            if (flags & NI_NAMEREQD) {
+                rb_raise(rb_eSocket, "getnameinfo: nodename nor servname provided, or not known");
+            } else { // return unresolved IP address in the result
+                host = hbuf;
+                return 0;
+            }
+        } else {
+            host = StringValueCStr(hostname);
+            return 0;
+        }
+    }
+
 #ifdef GETADDRINFO_EMU
     return getnameinfo(sa, salen, host, hostlen, serv, servlen, flags);
 #else
