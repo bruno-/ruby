@@ -3,7 +3,7 @@ require 'test/unit'
 require_relative 'scheduler'
 
 class TestAddressResolve < Test::Unit::TestCase
-  class NoopScheduler < Scheduler
+  class NullScheduler < Scheduler
     def address_resolve(*)
     end
   end
@@ -16,7 +16,7 @@ class TestAddressResolve < Test::Unit::TestCase
 
   def test_addrinfo_getaddrinfo_localhost_non_blocking
     Thread.new do
-      scheduler = NoopScheduler.new # scheduler hook not invoked
+      scheduler = NullScheduler.new # scheduler hook not invoked
       Fiber.set_scheduler scheduler
 
       Fiber.schedule do
@@ -53,7 +53,7 @@ class TestAddressResolve < Test::Unit::TestCase
 
   def test_addrinfo_getaddrinfo_numeric_non_blocking
     Thread.new do
-      scheduler = NoopScheduler.new # scheduler hook not invoked
+      scheduler = NullScheduler.new # scheduler hook not invoked
       Fiber.set_scheduler scheduler
 
       Fiber.schedule do
@@ -71,7 +71,7 @@ class TestAddressResolve < Test::Unit::TestCase
 
   def test_addrinfo_getaddrinfo_any_non_blocking
     Thread.new do
-      scheduler = NoopScheduler.new # scheduler hook not invoked
+      scheduler = NullScheduler.new # scheduler hook not invoked
       Fiber.set_scheduler scheduler
 
       Fiber.schedule do
@@ -89,7 +89,7 @@ class TestAddressResolve < Test::Unit::TestCase
 
   def test_addrinfo_getaddrinfo_non_existing_domain_blocking
     Thread.new do
-      scheduler = NoopScheduler.new # invoked, returns nil
+      scheduler = NullScheduler.new # invoked, returns nil
       Fiber.set_scheduler scheduler
 
       Fiber.schedule do
@@ -103,7 +103,7 @@ class TestAddressResolve < Test::Unit::TestCase
 
   def test_addrinfo_getaddrinfo_no_host_non_blocking
     Thread.new do
-      scheduler = NoopScheduler.new # scheduler hook not invoked
+      scheduler = NullScheduler.new # scheduler hook not invoked
       Fiber.set_scheduler scheduler
 
       Fiber.schedule do
