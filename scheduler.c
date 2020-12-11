@@ -24,6 +24,7 @@ static ID id_io_write;
 static ID id_io_wait;
 
 static ID id_address_resolve;
+static ID id_name_resolve;
 
 void
 Init_Scheduler(void)
@@ -40,6 +41,7 @@ Init_Scheduler(void)
     id_io_wait = rb_intern_const("io_wait");
 
     id_address_resolve = rb_intern_const("address_resolve");
+    id_name_resolve = rb_intern_const("name_resolve");
 }
 
 VALUE
@@ -187,4 +189,16 @@ VALUE
 rb_scheduler_address_resolve(VALUE scheduler, VALUE hostname, VALUE timeout)
 {
     return rb_funcall(scheduler, id_address_resolve, 2, hostname, timeout);
+}
+
+int
+rb_scheduler_supports_name_resolve(VALUE scheduler)
+{
+    return rb_respond_to(scheduler, id_name_resolve);
+}
+
+VALUE
+rb_scheduler_name_resolve(VALUE scheduler, VALUE ip_address)
+{
+    return rb_funcall(scheduler, id_name_resolve, 1, ip_address);
 }
