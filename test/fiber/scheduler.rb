@@ -186,4 +186,10 @@ class Scheduler
       Addrinfo.getaddrinfo(hostname, nil).map(&:ip_address).uniq
     end.value
   end
+
+  def name_resolve(ip_address)
+    Thread.new do
+      Socket.getnameinfo(["AF_INET", nil, ip_address]).first
+    end.value
+  end
 end
