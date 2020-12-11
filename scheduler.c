@@ -41,6 +41,7 @@ Init_Scheduler(void)
     id_io_wait = rb_intern_const("io_wait");
 
     id_address_resolve = rb_intern_const("address_resolve");
+    id_name_resolve = rb_intern_const("name_resolve");
 }
 
 VALUE
