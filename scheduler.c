@@ -205,14 +205,8 @@ rb_fiber_scheduler_io_write(VALUE scheduler, VALUE io, VALUE buffer, size_t offs
     return rb_check_funcall(scheduler, id_io_write, 4, arguments);
 }
 
-int
-rb_scheduler_supports_address_resolve(VALUE scheduler)
-{
-    return rb_respond_to(scheduler, id_address_resolve);
-}
-
 VALUE
-rb_scheduler_address_resolve(VALUE scheduler, VALUE hostname, VALUE timeout)
+rb_fiber_scheduler_address_resolve(VALUE scheduler, VALUE hostname, VALUE timeout)
 {
     return rb_funcall(scheduler, id_address_resolve, 2, hostname, timeout);
 }

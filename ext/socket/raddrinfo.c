@@ -10,7 +10,7 @@
 
 #include "rubysocket.h"
 
-#include "internal/scheduler.h"
+#include "ruby/fiber/scheduler.h"
 
 #if defined(INET6) && (defined(LOOKUP_ORDER_HACK_INET) || defined(LOOKUP_ORDER_HACK_INET6))
 #define LOOKUP_ORDERS (sizeof(lookup_order_table) / sizeof(lookup_order_table[0]))
@@ -343,10 +343,9 @@ rb_getaddrinfo(const char *node, const char *service,
     if (ret == 0)
         allocated_by_malloc = 1;
     else {
-        VALUE scheduler = rb_scheduler_current();
+        VALUE scheduler = rb_fiber_scheduler_current();
 
-        if (scheduler != Qnil && rb_scheduler_supports_address_resolve(scheduler) &&
-            node && !(hints->ai_flags & AI_NUMERICHOST) &&
+        if (scheduler != Qnil && node && !(hints->ai_flags & AI_NUMERICHOST) &&
             strncmp(node, "localhost", strlen(node))) {
             return rb_schedule_getaddrinfo(scheduler, node, service, hints, res, Qnil);
         } else {
