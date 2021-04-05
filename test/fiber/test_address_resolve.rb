@@ -176,7 +176,7 @@ class TestAddressResolve < Test::Unit::TestCase
       Fiber.set_scheduler scheduler
 
       Fiber.schedule do
-        result = TCPSocket.gethostbyname("example.com", 80)
+        result = TCPSocket.gethostbyname("example.com")
 
         assert_equal([
           "example.com",
